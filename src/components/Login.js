@@ -1,21 +1,22 @@
-// MobileOtpLogin.jsx
 import React, { useState, useRef, useEffect } from "react";
-import { Fade, Slide } from "react-awesome-reveal";
+import { Slide, Fade } from "react-awesome-reveal";
 
 const Login = ({ onVerified }) => {
   const [mobile, setMobile] = useState("");
   const [otp, setOtp] = useState(["", "", "", ""]);
-  const [step, setStep] = useState(1); // 1: mobile, 2: otp
+  const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   const [timer, setTimer] = useState(30);
   const otpRefs = useRef([]);
   const mobileRef = useRef(null);
 
+  // Focus input on step change
   useEffect(() => {
     if (step === 1) mobileRef.current?.focus();
     if (step === 2) otpRefs.current[0]?.focus();
   }, [step]);
 
+  // OTP countdown timer
   useEffect(() => {
     let interval;
     if (step === 2 && timer > 0) {
@@ -38,18 +39,26 @@ const Login = ({ onVerified }) => {
     const newOtp = [...otp];
     newOtp[i] = val.slice(-1);
     setOtp(newOtp);
-    if (val && i < 3) otpRefs.current[i + 1]?.focus();
+    if (val && i < otp.length - 1) otpRefs.current[i + 1]?.focus();
   };
 
   const handleOtpKeyDown = (e, i) => {
-    if (e.key === "Backspace" && !otp[i] && i > 0)
+    if (e.key === "Backspace" && !otp[i] && i > 0) {
       otpRefs.current[i - 1]?.focus();
+    }
   };
 
   const handleVerifyOtp = () => {
-    if (otp.every((d) => /^\d$/.test(d))) {
-      onVerified(); // callback to parent
-    } else setError("Please enter a valid 4-digit OTP.");
+    if (otp.every((d) => /^\d$/.test(d))) onVerified();
+    else setError("Please enter a valid 4-digit OTP.");
+  };
+
+  const handleResendOtp = () => {
+    setError("");
+    setOtp(["", "", "", ""]);
+    setTimer(30);
+    otpRefs.current[0]?.focus();
+    // Trigger API call to resend OTP
   };
 
   const isVerifyDisabled = timer <= 0 || otp.some((d) => !d);
@@ -59,6 +68,7 @@ const Login = ({ onVerified }) => {
       <h2 className="text-2xl font-bold text-center mb-6">
         {step === 1 ? "Login with Mobile" : "Enter OTP"}
       </h2>
+
       {error && (
         <div className="text-red-500 text-sm mb-3 text-center">{error}</div>
       )}
@@ -71,7 +81,7 @@ const Login = ({ onVerified }) => {
               ref={mobileRef}
               maxLength={10}
               value={mobile}
-              onChange={(e) => setMobile(e.target.value.replace(/\D/, ""))}
+              onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
               className="peer w-full border-b-2 border-gray-300 focus:border-indigo-500 outline-none py-2 text-lg"
               placeholder=" "
             />
@@ -93,6 +103,7 @@ const Login = ({ onVerified }) => {
           <p className="text-center text-gray-500 mb-4">
             OTP sent to <span className="font-semibold">{mobile}</span>
           </p>
+
           <div className="flex justify-between mb-4 space-x-2">
             {otp.map((digit, i) => (
               <input
@@ -100,6 +111,7 @@ const Login = ({ onVerified }) => {
                 type="text"
                 maxLength={1}
                 value={digit}
+                aria-label={`OTP Digit ${i + 1}`}
                 ref={(el) => (otpRefs.current[i] = el)}
                 onChange={(e) => handleOtpChange(i, e.target.value)}
                 onKeyDown={(e) => handleOtpKeyDown(e, i)}
@@ -107,6 +119,7 @@ const Login = ({ onVerified }) => {
               />
             ))}
           </div>
+
           <button
             onClick={handleVerifyOtp}
             disabled={isVerifyDisabled}
@@ -118,10 +131,25 @@ const Login = ({ onVerified }) => {
           >
             Verify
           </button>
+
+          {timer <= 0 && (
+            <Fade direction="up" triggerOnce>
+              <button
+                onClick={handleResendOtp}
+                className="w-full py-2 text-indigo-600 font-medium hover:underline mb-2 transition"
+              >
+                Resend OTP
+              </button>
+            </Fade>
+          )}
+
           <p className="text-center text-gray-400 text-sm">
-            {timer > 0
-              ? `Resend OTP in ${timer}s`
-              : "OTP expired, request again"}
+            {timer > 0 && (
+              <Fade key={timer} direction="up" triggerOnce>
+                Resend OTP in {timer}s
+              </Fade>
+            )}
+            {timer === 0 && "OTP expired, request again"}
           </p>
         </Slide>
       )}

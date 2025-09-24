@@ -4,8 +4,8 @@ import { Fade } from "react-awesome-reveal";
 const MenuOptions = ({ onExit, onNavigate }) => {
   const options = [
     { label: "Book unreserved ticket", action: () => onNavigate("book") },
-    { label: "Ticket history", action: () => alert("Ticket history page WIP") },
-    { label: "Wallets & recharges", action: () => alert("Wallets page WIP") },
+    { label: "Ticket history", action: () => onNavigate("history") },
+    { label: "Wallets & recharges", action: () => onNavigate("wallet") },
     { label: "Exit", action: onExit },
   ];
 
