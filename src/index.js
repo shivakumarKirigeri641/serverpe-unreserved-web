@@ -5,6 +5,8 @@ import "./index.css";
 import App from "./App";
 import Login from "./components/Login";
 import Error from "./components/Error";
+import { Provider } from "react-redux";
+import appStore from "./store/appStore";
 
 // TEMP: comment other routes until you verify it works
 const appRouter = createBrowserRouter([
@@ -27,7 +29,9 @@ const appRouter = createBrowserRouter([
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
-  <React.StrictMode>
-    <RouterProvider router={appRouter} />
-  </React.StrictMode>
+  <Provider store={appStore}>
+    <React.StrictMode>
+      <RouterProvider router={appRouter} />
+    </React.StrictMode>
+  </Provider>
 );

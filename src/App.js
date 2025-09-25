@@ -5,6 +5,7 @@ import Loading from "./components/Loading";
 import BookTickets from "./components/BookTickets";
 import TicketHistory from "./components/TicketHistory";
 import Wallet from "./components/Wallet";
+import axios from "axios";
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -13,12 +14,8 @@ const App = () => {
 
   // OTP verified → login success
   const handleOtpVerified = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setIsLoggedIn(true);
-      setCurrentPage("menu");
-      setLoading(false);
-    }, 800); // simulate API delay
+    setIsLoggedIn(true);
+    setCurrentPage("menu");
   };
 
   // Navigate menu
@@ -31,7 +28,12 @@ const App = () => {
   };
 
   // Logout
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await axios.post(
+      process.env.REACT_APP_API_SERVER + "/unreserved-ticket/user/logout",
+      {},
+      { withCredentials: true }
+    );
     setIsLoggedIn(false);
     setCurrentPage("menu");
   };

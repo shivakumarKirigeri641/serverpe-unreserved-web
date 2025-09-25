@@ -1,12 +1,16 @@
+import axios from "axios";
 import React, { useState, useRef, useEffect } from "react";
 import { Slide, Fade } from "react-awesome-reveal";
-
+import { useDispatch } from "react-redux";
+import { addStationsList } from "../store/slices/stationsListSlice";
 const Login = ({ onVerified }) => {
+  const dispatch = useDispatch();
   const [mobile, setMobile] = useState("");
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
-  const [timer, setTimer] = useState(30);
+  const [msg, setmsg] = useState("");
+  const [timer, setTimer] = useState(300);
   const otpRefs = useRef([]);
   const mobileRef = useRef(null);
 
@@ -25,12 +29,28 @@ const Login = ({ onVerified }) => {
     return () => clearInterval(interval);
   }, [step, timer]);
 
-  const handleGetOtp = () => {
+  const handleGetOtp = async () => {
+    setError("");
+    setmsg("");
     if (/^\d{10}$/.test(mobile)) {
-      setError("");
-      setStep(2);
-      setTimer(30);
-      setOtp(["", "", "", ""]);
+      try {
+        // call send-otp api
+        const result = await axios.post(
+          process.env.REACT_APP_API_SERVER + "/unreserved-ticket/user/send-otp",
+          { mobile_number: mobile },
+          { withCredentials: true }
+        );
+        if (result?.data?.success) {
+          setmsg(result?.data?.message);
+          setStep(2);
+          setTimer(30);
+          setOtp(["", "", "", ""]);
+        } else {
+          setError(result?.data?.message);
+        }
+      } catch (err) {
+        setError("Something went wrong.");
+      }
     } else setError("Please enter a valid 10-digit mobile number.");
   };
 
@@ -48,17 +68,61 @@ const Login = ({ onVerified }) => {
     }
   };
 
-  const handleVerifyOtp = () => {
-    if (otp.every((d) => /^\d$/.test(d))) onVerified();
-    else setError("Please enter a valid 4-digit OTP.");
+  const handleVerifyOtp = async () => {
+    if (otp.every((d) => /^\d$/.test(d))) {
+      setError("");
+      setmsg("");
+      try {
+        console.log(mobile, otp.join(""));
+        const result = await axios.post(
+          process.env.REACT_APP_API_SERVER +
+            "/unreserved-ticket/user/verify-otp",
+          { mobile_number: mobile, otp: otp.join("") },
+          { withCredentials: true }
+        );
+        console.log(result?.data);
+        if (result?.data?.success) {
+          //get stations and store them in reducer
+          const result_stations = await axios.get(
+            process.env.REACT_APP_API_SERVER +
+              "/unreserved-ticket/user/stations",
+            { withCredentials: true }
+          );
+          dispatch(addStationsList(result_stations?.data?.data));
+          onVerified();
+        } else {
+          setError(result?.data?.message);
+          setOtp(["", "", "", ""]);
+          otpRefs.current[0]?.focus();
+        }
+      } catch (err) {
+        setError(err.message);
+      }
+    } else setError("Please enter a valid 4-digit OTP.");
   };
 
-  const handleResendOtp = () => {
+  const handleResendOtp = async () => {
     setError("");
     setOtp(["", "", "", ""]);
     setTimer(30);
     otpRefs.current[0]?.focus();
-    // Trigger API call to resend OTP
+    try {
+      const result = await axios.post(
+        process.env.REACT_APP_API_SERVER + "/unreserved-ticket/user/send-otp",
+        { mobile_number: mobile },
+        { withCredentials: true }
+      );
+      if (result?.data?.success) {
+        setmsg(result?.data?.message);
+        setStep(2);
+        setTimer(30);
+        setOtp(["", "", "", ""]);
+      } else {
+        setError(result?.data?.message);
+      }
+    } catch (err) {
+      setError("Something went wrong.");
+    }
   };
 
   const isVerifyDisabled = timer <= 0 || otp.some((d) => !d);
@@ -69,6 +133,9 @@ const Login = ({ onVerified }) => {
         {step === 1 ? "Login with Mobile" : "Enter OTP"}
       </h2>
 
+      {msg && (
+        <div className="text-green-500 text-sm mb-3 text-center">{msg}</div>
+      )}
       {error && (
         <div className="text-red-500 text-sm mb-3 text-center">{error}</div>
       )}
@@ -91,7 +158,7 @@ const Login = ({ onVerified }) => {
           </div>
           <button
             onClick={handleGetOtp}
-            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition"
+            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition mb-3"
           >
             Get OTP
           </button>
@@ -143,7 +210,7 @@ const Login = ({ onVerified }) => {
             </Fade>
           )}
 
-          <p className="text-center text-gray-400 text-sm">
+          <p className="text-center text-red-400 font-semibold text-sm mb-3">
             {timer > 0 && (
               <Fade key={timer} direction="up" triggerOnce>
                 Resend OTP in {timer}s
@@ -151,6 +218,20 @@ const Login = ({ onVerified }) => {
             )}
             {timer === 0 && "OTP expired, request again"}
           </p>
+
+          {/* Back button */}
+          <button
+            onClick={() => {
+              setStep(1);
+              setOtp(["", "", "", ""]);
+              setError("");
+              setmsg("");
+              setTimer(30);
+            }}
+            className="w-full bg-gray-200 text-gray-700 py-2 rounded-xl font-medium hover:bg-gray-300 transition"
+          >
+            Back
+          </button>
         </Slide>
       )}
     </div>
